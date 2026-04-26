@@ -14,18 +14,23 @@
 #'
 #' @keywords internal
 #'
-r_ver_exists <- function(version, r_mode = "base", verbose = FALSE) {
+.r_ver_exists <- function(version, r_mode = "base", verbose = FALSE) {
     # Define valid modes
-    valid_modes <- c("base", "rstudio", "tidyverse")
+    valid_modes <- c("base", "rstudio", "tidyverse", "tidystudio")
 
     # Validate r_mode early
     if (!r_mode %in% valid_modes) {
-        stop(sprintf("Invalid r_mode: '%s'. Must be one of: %s", r_mode, paste(valid_modes, collapse = ", ")))
+        cli::cli_abort(c(
+            "{.val {r_mode}} is not a valid {.arg r_mode}.",
+            "i" = "Must be one of {.val {valid_modes}}."
+        ))
     }
 
     # Validate version input type
-    if (!is.character(version) || length(version) != 1) {
-        stop("version must be a single character string, e.g. '4.4.0' or 'devel'")
+    if (!is.character(version) || length(version) != 1 || is.na(version)) {
+        cli::cli_abort(
+            "{.arg version} must be a single character string, e.g. {.val 4.4.0} or {.val devel}."
+        )
     }
 
     # Define valid tag pattern
@@ -33,18 +38,24 @@ r_ver_exists <- function(version, r_mode = "base", verbose = FALSE) {
 
     # Validate format using regex
     if (!grepl(valid_pattern, version)) {
-        stop(sprintf("Invalid version format: '%s'. Must match semantic versioning or be 'latest'/'devel'.", version))
+        cli::cli_abort(c(
+            "{.val {version}} is not a valid version format.",
+            "i" = "Must match semantic versioning (e.g. {.val 4.4.0}) or be {.val latest} or {.val devel}."
+        ))
     }
 
     # Get tag info
-    tag_info <- get_r_ver_tags(r_mode = r_mode, verbose = verbose)
+    tag_info <- .get_r_ver_tags(r_mode = r_mode, verbose = verbose)
 
     # Check existence
     exists <- version %in% tag_info$tags
 
     if (verbose) {
-        msg <- if (exists) "Version exist" else "Version not found"
-        message(msg, " ", version, " in ", tag_info$image)
+        if (exists) {
+            cli::cli_inform("Version {.val {version}} found in {.val {tag_info$image}}.")
+        } else {
+            cli::cli_inform("Version {.val {version}} not found in {.val {tag_info$image}}.")
+        }
     }
 
     return(exists)
